@@ -11,6 +11,7 @@ state("meridian")
 	// Not sure what runLevel is exactly, but needed for kill bilbo (need to ask md_pi)
 	float stamina : 0x35BA3C, 0xA04;
 	float longjumpCount : 0x35C050;
+	float loadSaveInstruction : 0x3641EC;
 	bool runLevel : 0x360354;
 	bool onCinema : 0x35CCE4;
 	int cinemaID : 0x35CD00;
@@ -59,6 +60,8 @@ startup
 	vars.noStartLevelMB = false;
 	vars.mainMenuReached = false;
 	vars.messageBoxTitle = "The Hobbit PC | LiveSplit";
+
+	vars.timerModel = new TimerModel { CurrentState = timer };
 
 	if(timer.CurrentTimingMethod == TimingMethod.RealTime){	
 		var timingMessage = MessageBox.Show(
@@ -120,6 +123,15 @@ init
 update
 {
 	if(current.oolState == 6 && !vars.mainMenuReached) vars.mainMenuReached = true;
+	if(current.levelQueued != -1 && current.levelQueued < vars.levelSplitID)
+	{
+		if(vars.levelSplitID > current.levelID)
+		{
+			vars.timerModel.UndoSplit();
+			vars.levelSplitID--;
+		}
+	}
+	
 	if(settings["ilseg"])
 	{	
 		if(settings["dw"]) vars.levelStartID = 0;
@@ -238,7 +250,7 @@ reset
 	// If we load a save and it's not for the current level we are on, reset.
 	// This was mainly for the annoying situations where you were on a level like AUP and accidentally loaded a practice save on inside info and your timer would spam split until inside info.
 	// I don't see a logical reason to load a save on a level other than the one your currently on for any reason unless by mistake, so I think this is fine?
-	if(current.levelQueued != -1 && current.levelQueued != vars.levelSplitID) return true;
+	if(current.levelQueued != -1 && current.levelQueued > vars.levelSplitID) return true;
 
 	// Check if attack is used while running NJA.
 	if(current.stamina < 10 && current.stamina > 0 && timer.Run.CategoryName == "No Jump-Attacks") return true;
